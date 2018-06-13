@@ -2,6 +2,7 @@
 # -*-: coding utf-8 -*-
 
 from hermes_python.hermes import Hermes
+import hermes_python
 import calendar
 import os
 import time
@@ -60,6 +61,7 @@ class Skill:
                 else:
                     job.dow.during('MON', 'SUN')
         print(job)
+
         self.cron.write()
         return 
 
@@ -72,6 +74,8 @@ class Skill:
         self.cron.remove_all(comment=tag)  
         self.cron.write()
         if tag in self.timer:
+            for tmp in self.timer[tag]:
+                tmp.cancel()
             del self.timer[tag]
 
 def extract_tag(intent_message):
@@ -113,12 +117,22 @@ def extract_time(intent_message):
     tag = []
     if intent_message.slots.time is not None:
         for room in intent_message.slots.time:
-            print(room.slot_value.value_type)
-            if room.slot_value.value_type == "" :
-                tag.append(room.slot_value.value.value)
+            if type(room.slot_value.value) == hermes_python.ontology.TimeIntervalValue :
+                print("toto")
+                t0 = room.slot_value.value.from_date[:-7] 
+                t0 = datetime.strptime(t0, '%Y-%m-%d %H:%M:%S')
+                t1 = room.slot_value.value.to_date[:-7] 
+                t1 = datetime.strptime(t1, '%Y-%m-%d %H:%M:%S')
+                delta = t1 - t0
+                tmp = t0 + delta / 2
+                tag.append(tmp)
+            if type(room.slot_value.value) == hermes_python.ontology.InstantTimeValue :
+                tmp = room.slot_value.value.value[0][:-7] 
+                tmp = datetime.strptime(tmp, '%Y-%m-%d %H:%M:%S')
+                tag.append(tmp)
+        
     if len (tag):
-        tmp = tag[0][:-7] 
-        return datetime.strptime(tmp, '%Y-%m-%d %H:%M:%S')
+        return tag[0]
     return None
 
 def setAlarm(hermes, intent_message):
