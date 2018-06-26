@@ -7,10 +7,10 @@ import calendar
 import json
 import os
 import time
-import playsound
 import threading
 from crontab import CronTab
 from datetime import datetime
+import requests
 import paho.mqtt.client as mqtt
 CONFIGURATION_ENCODING_FORMAT = "utf-8"
 CONFIG_INI = "config.ini"
@@ -24,6 +24,7 @@ DIR = os.path.dirname(os.path.realpath(__file__)) + '/alarm/'
 alive = 0;
 lang = "EN"
 client = None
+pingTopic = 'concierge/apps/live/ping'
 
 def getMqttPlayTopic(siteId, requestId):
     return "hermes/audioServer/{}/playBytes/{}".format(siteId,requestId);
@@ -39,7 +40,8 @@ def call_timer(siteId):
     payload = bytearray(imagestring)
     client.publish(topic, payload)
     alive -= 1;
-    publish()
+    if (alive <= 0):
+        client.unsubscribe(pingTopic)
     return
 
 class Skill:
@@ -62,6 +64,7 @@ class Skill:
         else:
             self.timer[tag] += [t]
         alive += 1
+        client.subscribe(pingTopic)
         return
 
     def set_alarm(self, every, time, day, siteId):
@@ -97,6 +100,8 @@ class Skill:
         self.cron.write()
         if tag in self.timer:
             alive -= 1
+            if (alive <= 0):
+                client.unsubscribe(pingTopic)
             for tmp in self.timer[tag]:
                 tmp.cancel()
             del self.timer[tag]
@@ -141,7 +146,6 @@ def extract_time(intent_message):
     if intent_message.slots.time is not None:
         for room in intent_message.slots.time:
             if type(room.slot_value.value) == hermes_python.ontology.TimeIntervalValue :
-                print("toto")
                 t0 = room.slot_value.value.from_date[:-7]
                 t0 = datetime.strptime(t0, '%Y-%m-%d %H:%M:%S')
                 t1 = room.slot_value.value.to_date[:-7]
@@ -175,30 +179,18 @@ def stopTimer(hermes, intent_message):
     hermes.skill.remove_alarm(extract_tag(intent_message))
 
 def on_connect(client, userdata, flags, rc):
-    publish()
-    client.subscribe("concierge/ping")
-    client.subscribe("concierge/config/res")
-    print("[mqtt][ask] config")
-    client.publish("concierge/config", None)
+    if (alive > 0):
+        client.subscribe(pingTopic)
 
 def on_message(client, userdata, msg):
-    global lang
-    if (msg.topic == 'concierge/ping'):
-        publish();
-    if (msg.topic == 'concierge/config/res'):
-        client.unsubscribe("concierge/config/res")
-        data = json.loads(msg.payload)
-        lang = data['assistant']['lang'].upper()
-        print("lang: " + lang)
+    print("toto")
+    client.publish('concierge/apps/live/pong', '{"result":"snips-skill-timer"}')
 
-def publish():
-    print("answer to ping")
-    if alive > 0:
-        tmp = "active"
-    else:
-        tmp = "installed"
-    client.publish("concierge/pong", '{"id":"1","status":"'
-                   + tmp + '"}')
+def getLang():
+    try:
+        return requests.get("http://localhost:3000/config/lang").text.upper();
+    except:
+        return "EN"
 
 if __name__ == "__main__":
     skill = Skill()
@@ -207,7 +199,7 @@ if __name__ == "__main__":
     client.on_message = on_message
     client.connect(MQTT_IP_ADDR)
     client.loop_start()
-    time.sleep(1)
+    lang = getLang()
 
     with Hermes(MQTT_ADDR) as h:
         h.skill = Skill()

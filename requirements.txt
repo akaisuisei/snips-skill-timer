@@ -1,4 +1,4 @@
 hermes_python>=0.1
 python-crontab
 paho-mqtt
-python-crontab
+requests
