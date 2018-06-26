@@ -4,6 +4,7 @@
 from hermes_python.hermes import Hermes
 import hermes_python
 import calendar
+import json
 import os
 import time
 import playsound
@@ -21,7 +22,7 @@ MQTT_ADDR = "{}:{}".format(MQTT_IP_ADDR, str(MQTT_PORT))
 DIR = os.path.dirname(os.path.realpath(__file__)) + '/alarm/'
 
 alive = 0;
-
+lang = "EN"
 client = None
 
 def getMqttPlayTopic(siteId, requestId):
@@ -181,11 +182,14 @@ def on_connect(client, userdata, flags, rc):
     client.publish("concierge/config", None)
 
 def on_message(client, userdata, msg):
-    print(msg.topic)
+    global lang
     if (msg.topic == 'concierge/ping'):
         publish();
     if (msg.topic == 'concierge/config/res'):
-        print(str(msg.payload));
+        client.unsubscribe("concierge/config/res")
+        data = json.loads(msg.payload)
+        lang = data['assistant']['lang'].upper()
+        print("lang: " + lang)
 
 def publish():
     print("answer to ping")
@@ -203,10 +207,11 @@ if __name__ == "__main__":
     client.on_message = on_message
     client.connect(MQTT_IP_ADDR)
     client.loop_start()
+    time.sleep(1)
 
     with Hermes(MQTT_ADDR) as h:
         h.skill = Skill()
-        h.subscribe_intent("akaisuisei:setAlarm", setAlarm) \
-        .subscribe_intent("akaisuisei:SetTimer", set_timer) \
-        .subscribe_intent("akaisuisei:StopTimer", stopTimer) \
+        h.subscribe_intent("snips-labs:setAlarm_" + lang, setAlarm) \
+        .subscribe_intent("snips-labs:SetTimer_" + lang, set_timer) \
+        .subscribe_intent("snips-labs:StopTimer_" + lang, stopTimer) \
          .loop_forever()
