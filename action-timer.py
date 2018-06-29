@@ -188,8 +188,9 @@ def on_message(client, userdata, msg):
 
 def getLang():
     try:
-        return requests.get("http://localhost:3000/config/lang").text.upper();
-    except:
+        res = requests.get("http://localhost:3000/assistant/lang").json;
+        return res.response
+    except :
         return "EN"
 
 if __name__ == "__main__":
@@ -200,7 +201,6 @@ if __name__ == "__main__":
     client.connect(MQTT_IP_ADDR)
     client.loop_start()
     lang = getLang()
-
     with Hermes(MQTT_ADDR) as h:
         h.skill = Skill()
         h.subscribe_intent("snips-labs:setAlarm_" + lang, setAlarm) \
