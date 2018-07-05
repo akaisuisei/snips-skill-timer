@@ -21,10 +21,17 @@ MQTT_ADDR = "{}:{}".format(MQTT_IP_ADDR, str(MQTT_PORT))
 
 DIR = os.path.dirname(os.path.realpath(__file__)) + '/alarm/'
 
+appId = 'snips-skill-timer'
 alive = 0;
 lang = "EN"
 client = None
-pingTopic = 'concierge/apps/live/ping'
+
+liveTopic = 'concierge/apps/live'
+liveTopicPing = '{}/ping'.format(liveTopic)
+liveTopicPong = '{}/pong'.format(liveTopic)
+viewTopic = 'concierge/apps/{}/view'.format(appId)
+viewTopicPing = '{}/ping'.format(viewTopic)
+viewTopicPong = '{}/pong'.format(viewTopic)
 
 def getMqttPlayTopic(siteId, requestId):
     return "hermes/audioServer/{}/playBytes/{}".format(siteId,requestId);
@@ -41,7 +48,7 @@ def call_timer(siteId):
     client.publish(topic, payload)
     alive -= 1;
     if (alive <= 0):
-        client.unsubscribe(pingTopic)
+        client.unsubscribe(liveTopicPing)
     return
 
 class Skill:
@@ -64,7 +71,7 @@ class Skill:
         else:
             self.timer[tag] += [t]
         alive += 1
-        client.subscribe(pingTopic)
+        client.subscribe(liveTopicPing)
         return
 
     def set_alarm(self, every, time, day, siteId):
@@ -101,7 +108,7 @@ class Skill:
         if tag in self.timer:
             alive -= 1
             if (alive <= 0):
-                client.unsubscribe(pingTopic)
+                client.unsubscribe(liveTopicPing)
             for tmp in self.timer[tag]:
                 tmp.cancel()
             del self.timer[tag]
@@ -180,11 +187,23 @@ def stopTimer(hermes, intent_message):
 
 def on_connect(client, userdata, flags, rc):
     if (alive > 0):
-        client.subscribe(pingTopic)
+        client.subscribe(liveTopicPing)
+    client.subscribe(viewTopic)
 
 def on_message(client, userdata, msg):
-    print("toto")
-    client.publish('concierge/apps/live/pong', '{"result":"snips-skill-timer"}')
+    if msg.topic == liveTopicPing:
+        client.publish(liveTopicPong, '{"result":"snips-skill-timer"}')
+    elif msg.topic == viewTopicPing:
+        client.publish(viewTopicPong, generateView())
+
+def generateView():
+    timers = [
+        {
+            'type': 'toggle'
+            'value': 'on'
+        }
+    ]
+    return json.dumps(timers)
 
 def getLang():
     try:
