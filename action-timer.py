@@ -188,22 +188,30 @@ def stopTimer(hermes, intent_message):
 def on_connect(client, userdata, flags, rc):
     if (alive > 0):
         client.subscribe(liveTopicPing)
-    client.subscribe(viewTopic)
+    client.subscribe(viewTopicPing)
 
 def on_message(client, userdata, msg):
     if msg.topic == liveTopicPing:
         client.publish(liveTopicPong, '{"result":"snips-skill-timer"}')
     elif msg.topic == viewTopicPing:
-        client.publish(viewTopicPong, generateView())
+        client.publish(viewTopicPong, json.dumps({"result": generateView()}))
 
 def generateView():
-    timers = [
-        {
-            'type': 'toggle'
-            'value': 'on'
-        }
+    alarms = [
+        {'time': datetime.strptime('Jul 10 2018  6:30AM', '%b %d %Y %I:%M%p'), 'siteId': "bedroom"},
+        {'time': datetime.strptime('Jul 10 2018  7:00AM', '%b %d %Y %I:%M%p'), 'siteId': "bedroom"},
+        {'time': datetime.strptime('Jul 10 2018  8:00AM', '%b %d %Y %I:%M%p'), 'siteId': "living room"}
     ]
-    return json.dumps(timers)
+    items = []
+    for alarm in alarms:
+        viewItem = {
+            'type': 'toggle',
+            'title': alarm['time'].strftime("%H:%M"),
+            'subtitle': alarm['siteId'].capitalize(),
+            'value': True
+        }
+        items.append(viewItem)
+    return items
 
 def getLang():
     try:
@@ -220,9 +228,10 @@ if __name__ == "__main__":
     client.connect(MQTT_IP_ADDR)
     client.loop_start()
     lang = getLang()
+    
     with Hermes(MQTT_ADDR) as h:
-        h.skill = Skill()
+        h.skill = skill
         h.subscribe_intent("snips-labs:setAlarm_" + lang, setAlarm) \
         .subscribe_intent("snips-labs:SetTimer_" + lang, set_timer) \
         .subscribe_intent("snips-labs:StopTimer_" + lang, stopTimer) \
-         .loop_forever()
+        .loop_forever()
