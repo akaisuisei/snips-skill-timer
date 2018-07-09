@@ -32,6 +32,7 @@ liveTopicPong = '{}/pong'.format(liveTopic)
 viewTopic = 'concierge/apps/{}/view'.format(appId)
 viewTopicPing = '{}/ping'.format(viewTopic)
 viewTopicPong = '{}/pong'.format(viewTopic)
+timerTopicSend = 'concierge/feedback/led/default/timer'
 
 def getMqttPlayTopic(siteId, requestId):
     return "hermes/audioServer/{}/playBytes/{}".format(siteId,requestId);
@@ -72,7 +73,7 @@ class Skill:
             self.timer[tag] += [t]
         alive += 1
         client.subscribe(liveTopicPing)
-        return
+        return  duration
 
     def set_alarm(self, every, time, day, siteId):
         topic = getMqttPlayTopic(siteId, siteId)
@@ -112,6 +113,8 @@ class Skill:
             for tmp in self.timer[tag]:
                 tmp.cancel()
             del self.timer[tag]
+            return True
+        return False
 
 def extract_tag(intent_message):
     tag = []
@@ -125,7 +128,6 @@ def extract_duration(intent_message):
     if intent_message.slots.timer_duration is not None:
         for room in intent_message.slots.timer_duration:
             duration = room.slot_value.value
-            print(type(duration))
             duration = duration.hours * 3600 + duration.minutes * 60 + duration.seconds
             print(duration)
             return duration
@@ -179,12 +181,14 @@ def setAlarm(hermes, intent_message):
 def set_timer(hermes, intent_message):
     current_session_id = intent_message.session_id
     siteId = intent_message.site_id
-    hermes.skill.set_timer(extract_tag(intent_message),extract_duration(intent_message),siteId)
+    tmp = hermes.skill.set_timer(extract_tag(intent_message),extract_duration(intent_message),siteId)
+    client.publish(timerTopicSend, '{"duration":%s}' % tmp)
 
 def stopTimer(hermes, intent_message):
     current_session_id = intent_message.session_id
-    hermes.skill.remove_alarm(extract_tag(intent_message))
-
+    able = hermes.skill.remove_alarm(extract_tag(intent_message))
+    if (able):
+        client.publish('concierge/feedback/led/default/stop', None)
 def on_connect(client, userdata, flags, rc):
     # TEMP: make it appear as always live for now
     if (alive > 0) or True:
@@ -199,9 +203,9 @@ def on_message(client, userdata, msg):
 
 def generateView():
     alarms = [
-        {'time': datetime.strptime('Jul 10 2018  6:30AM', '%b %d %Y %I:%M%p'), 'siteId': "bedroom"},
-        {'time': datetime.strptime('Jul 10 2018  7:00AM', '%b %d %Y %I:%M%p'), 'siteId': "bedroom"},
-        {'time': datetime.strptime('Jul 10 2018  8:00AM', '%b %d %Y %I:%M%p'), 'siteId': "living room"}
+        {'tag': 1, 'time': datetime.strptime('Jul 10 2018  6:30AM', '%b %d %Y %I:%M%p'), 'siteId': "bedroom"},
+        {'tag': 2, 'time': datetime.strptime('Jul 10 2018  7:00AM', '%b %d %Y %I:%M%p'), 'siteId': "bedroom"},
+        {'tag': 3, 'time': datetime.strptime('Jul 10 2018  8:00AM', '%b %d %Y %I:%M%p'), 'siteId': "living room"}
     ]
     items = []
     for alarm in alarms:
@@ -209,7 +213,15 @@ def generateView():
             'type': 'toggle',
             'title': alarm['time'].strftime("%H:%M"),
             'subtitle': alarm['siteId'].capitalize(),
-            'value': True
+            'value': True,
+            'onValueChangeToOn': {
+                "intent": "snips-labs:setAlarm_EN",
+                "slots": [ { "timer_name": alarm['tag'] } ]
+            },
+            'onValueChangeToOff': {
+                "intent": "snips-labs:StopTimer_EN",
+                "slots": [ { "timer_name": alarm['tag'] } ]
+            }
         }
         items.append(viewItem)
     return items
@@ -219,7 +231,7 @@ def getLang():
         res = requests.get("http://localhost:3000/assistant/lang").json;
         return res.response
     except :
-        return "EN"
+        return "FR"
 
 if __name__ == "__main__":
     skill = Skill()
@@ -229,7 +241,7 @@ if __name__ == "__main__":
     client.connect(MQTT_IP_ADDR)
     client.loop_start()
     lang = getLang()
-    
+
     with Hermes(MQTT_ADDR) as h:
         h.skill = skill
         h.subscribe_intent("snips-labs:setAlarm_" + lang, setAlarm) \
