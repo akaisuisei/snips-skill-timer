@@ -186,7 +186,8 @@ def stopTimer(hermes, intent_message):
     hermes.skill.remove_alarm(extract_tag(intent_message))
 
 def on_connect(client, userdata, flags, rc):
-    if (alive > 0):
+    # TEMP: make it appear as always live for now
+    if (alive > 0) or True:
         client.subscribe(liveTopicPing)
     client.subscribe(viewTopicPing)
 
