@@ -113,6 +113,7 @@ class Skill:
             for tmp in self.timer[tag]:
                 tmp.cancel()
             del self.timer[tag]
+            client.publish('concierge/feedback/led/default/stop', '')
             return True
         return False
 
