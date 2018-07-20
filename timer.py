@@ -13,13 +13,16 @@ class Timer:
         self.timer = {}
         self.concierge = concierge
         self.concierge.subscribePing(self.on_ping)
+        self.concierge.subscribeView(Timer._id,self.on_view)
         self._alive = 0
 
     def getView(self):
         items  = []
         for timers in self.timer.itervalues():
-            for timer in timers:
-                items.append(timer.getView())
+            print(timers)
+            for timer in timers.itervalues():
+                if (timer):
+                    items.append(timer.getView())
         return items
 
     def call(self, siteId, tag):
@@ -78,6 +81,9 @@ class Timer:
             return
         self.concierge.publishPong(Timer._id)
 
+    def on_view(self, client, userdata, msg):
+        self.concierge.publishView(Timer._id, self.getView())
+
 class Data:
     def __init__(self, tag, duration, siteId, func):
         self.tag = tag
@@ -90,7 +96,7 @@ class Data:
     def cancel(self):
         self.t.cancel()
 
-    def getView(data):
+    def getView(self):
         return {
                 'type': 'toggle',
                 'title':self.duration,
