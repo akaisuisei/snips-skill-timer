@@ -1,3 +1,6 @@
+from datetime import datetime
+import hermes_python
+
 class Extract:
 
     @staticmethod
@@ -48,11 +51,11 @@ class Extract:
                     tmp = t0 + delta / 2
                     tag.append(tmp)
                 if type(value) == hermes_python.ontology.InstantTimeValue :
-                    tmp = value.value[0][:-7]
+                    tmp = value.value[:-7]
                     tmp = datetime.strptime(tmp, '%Y-%m-%d %H:%M:%S')
                     tag.append(tmp)
         return tag
 
     @staticmethod
     def timeSlot(slots, default = None):
-        return Extract._getFirst(slots, default, Extract.timeSlot)
+        return Extract._getFirst(slots, default, Extract.timeSlots)
