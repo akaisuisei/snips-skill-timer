@@ -2,8 +2,8 @@
 # -*-: coding utf-8 -*-
 
 from alarm import Alarm
-from concierge import Concierge
-from extract import Extract
+from concierge_python.concierge import Concierge
+from concierge_python.extract import Extract
 from hermes_python.hermes import Hermes
 from timer import Timer
 

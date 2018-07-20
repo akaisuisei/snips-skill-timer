@@ -1,4 +1,2 @@
 hermes_python>=0.1
-python-crontab
-paho-mqtt
-requests
+git+git://github.com/akaisuisei/concierge-python

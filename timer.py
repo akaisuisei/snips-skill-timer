@@ -2,7 +2,7 @@ import os
 import re
 import time
 import threading
-import utils
+import concierge_python.utils as utils
 
 DIR = os.path.dirname(os.path.realpath(__file__)) + '/alarm/'
 
