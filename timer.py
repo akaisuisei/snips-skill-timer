@@ -74,10 +74,9 @@ class Timer:
             print(self._alive)
 
     def on_ping(self, client, userdata, msg):
-        if self.alive <= 0:
+        if self._alive <= 0:
             return
-        self.concierge.sendPong(Timer._id)
-
+        self.concierge.publishPong(Timer._id)
 
 class Data:
     def __init__(self, tag, duration, siteId, func):
