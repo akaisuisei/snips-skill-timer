@@ -13,7 +13,7 @@ class Timer:
         self.timer = {}
         self.concierge = concierge
         self.concierge.subscribePing(self.on_ping)
-        self.concierge.subscribeView(Timer._id,self.on_view)
+        self.concierge.subscribeView(Timer._id, self.on_view)
         self._alive = 0
 
     def getView(self):
@@ -40,7 +40,7 @@ class Timer:
                     return n_tag
         return "timer"
 
-    def add(self, tag_group, duration, siteId):
+    def _add(self, tag_group, duration, siteId):
         tag_group = tag_group[0] if len(tag_group) else ""
         if (tag_group == ""):
             tag_group = "timer"
@@ -50,8 +50,18 @@ class Timer:
             self.timer[tag_group] = {}
         self.timer[tag_group][tag] = Data(tag, duration, siteId, self.call)
         self._alive += 1
-        self.concierge.publishTimer(duration)
+        self.concierge.publishTimer(duration, siteId)
         print(self.timer)
+
+    def add(self, tag_group, duration, siteId, room = None):
+        site_ids = None
+        if room is not None:
+            site_ids = self.concierge.getIdFromRoom(room)
+        if site_ids is None or not len(site_ids):
+            site_ids = [siteId]
+        print(site_ids)
+        for tmp in site_ids:
+            self._add(tag_group, duration, tmp)
 
     def _find_timer_group(self, tag):
         tag_group = re.search(r'(.*)\(.*\)$',tag)
@@ -76,12 +86,12 @@ class Timer:
             print(self.timer)
             print(self._alive)
 
-    def on_ping(self, client, userdata, msg):
+    def on_ping(self):
         if self._alive <= 0:
             return
         self.concierge.publishPong(Timer._id)
 
-    def on_view(self, client, userdata, msg):
+    def on_view(self):
         self.concierge.publishView(Timer._id, self.getView())
 
 class Data:

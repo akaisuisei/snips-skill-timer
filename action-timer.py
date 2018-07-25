@@ -17,7 +17,8 @@ def set_timer(hermes, intent_message):
     siteId = intent_message.site_id
     tag = Extract.values(intent_message.slots.timer_name)
     duration = Extract.duration(intent_message.slots.timer_duration)
-    hermes.timer.add(tag, duration,siteId)
+    room = Extract.value(intent_message.slots.timer_room, None)
+    hermes.timer.add(tag, duration, siteId, room)
 
 def stopTimer(hermes, intent_message):
     current_session_id = intent_message.session_id
