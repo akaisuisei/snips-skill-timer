@@ -31,12 +31,14 @@ class Timer:
         self.remove(tag)
 
     def _find_new_tag(self, tag):
+        print(self.timer)
+        print(tag)
         if tag not in self.timer or self.timer[tag] is None:
             return tag
         else:
             for x in range(0, 9):
                 n_tag = tag + "({})".format(x)
-                if n_tag not in self.timer[tag].keys:
+                if n_tag not in self.timer[tag]:
                     return n_tag
         return "timer"
 
@@ -59,7 +61,6 @@ class Timer:
             site_ids = self.concierge.getIdFromRoom(room)
         if site_ids is None or not len(site_ids):
             site_ids = [siteId]
-        print(site_ids)
         for tmp in site_ids:
             self._add(tag_group, duration, tmp)
 
