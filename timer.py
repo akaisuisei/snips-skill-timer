@@ -75,17 +75,22 @@ class Timer:
         if isinstance(tag, list):
             tag = tag[0] if len(tag) else ""
         print("remove timer stop:"+ tag)
-        tag_group = self._find_timer_group(tag)
-        if (tag_group):
-            self._alive -= 1
-            t = self.timer[tag_group].pop(tag, None)
-            if (t):
-                t.cancel()
-            if (not len(self.timer[tag_group])):
-                self.timer.pop(tag_group, None)
-            self.concierge.publishStopLed()
-            print(self.timer)
-            print(self._alive)
+        if tag == "":
+            for timers in self.timer.itervalues():
+                print(timers)
+                for timer in timers.itervalues():
+                    if (timer):
+                        timer.cancel()
+        else:
+            tag_group = self._find_timer_group(tag)
+            if (tag_group):
+                self._alive -= 1
+                t = self.timer[tag_group].get(tag, None)
+                if (t):
+                    t.cancel()
+                self.concierge.publishStopLed()
+                print(self.timer)
+                print(self._alive)
 
     def on_ping(self):
         if self._alive <= 0:
@@ -101,18 +106,20 @@ class Data:
         self.due_time = time.time() + duration
         self.duration = duration
         self.siteId = siteId
+        self.cancelled = False
         self.t = threading.Timer(duration, func, [siteId, tag])
         self.t.start()
 
     def cancel(self):
         self.t.cancel()
+        self.cancelled = True
 
     def getView(self):
         return {
                 'type': 'toggle',
                 'title':self.duration,
                 'subtitle': self.siteId,
-                'value': True,
+                'value': not self.cancelled,
                 'onValueChangeToOn': {
                     "intent": "snips-labs:setAlarm_EN",
                     "slots": [ { "timer_name": self.tag } ]
